@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car Price Predictor - AI Powered Valuation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="style.css" rel="stylesheet">
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <nav class="nav">
+                <div class="logo">
+                    <span class="logo-icon">🚗</span>
+                    <span class="logo-text">CarValue<span class="logo-highlight">AI</span></span>
+                </div>
+                <div class="nav-links">
+                    <a href="#" class="nav-link active">Home</a>
+                    <a href="#" class="nav-link">About</a>
+                    <a href="#" class="nav-link">Contact</a>
+                    <div id="userMenu" style="display: flex; align-items: center; gap: 1rem; margin-left: 2rem; border-left: 1px solid var(--gray-300); padding-left: 1rem;">
+                        <span id="userName" style="color: var(--gray-700); font-weight: 500; font-size: 0.875rem;"></span>
+                        <button onclick="logout()" class="nav-link" style="background: none; border: none; cursor: pointer; color: #ef4444; padding: 0;">Logout</button>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1 class="hero-title">Get Your Car's True Value</h1>
+                <p class="hero-subtitle">AI-powered predictions with 76%+ accuracy. Know your car's worth in seconds.</p>
+                <div class="hero-stats">
+                    <div class="stat">
+                        <div class="stat-number">3.5K+</div>
+                        <div class="stat-label">Predictions</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number">92%</div>
+                        <div class="stat-label">Accuracy</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number">4.8★</div>
+                        <div class="stat-label">Rating</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            <!-- Prediction Form -->
+            <div class="card" id="predictionCard">
+                <div class="card-header">
+                    <h2 class="card-title">Enter Car Details</h2>
+                    <p class="card-subtitle">Fill in the information below to get instant valuation</p>
+                </div>
+                
+                <form id="predictionForm" class="form">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="brand">
+                                <span class="label-icon">🏢</span>
+                                Car Brand
+                            </label>
+                            <select id="brand" class="form-select" onchange="updateModels()" required>
+                                <option value="">Select Brand</option>
+                                <option value="Maruti">Maruti Suzuki</option>
+                                <option value="Hyundai">Hyundai</option>
+                                <option value="Honda">Honda</option>
+                                <option value="Tata">Tata</option>
+                                <option value="Mahindra">Mahindra</option>
+                                <option value="Toyota">Toyota</option>
+                                <option value="Ford">Ford</option>
+                                <option value="Chevrolet">Chevrolet</option>
+                                <option value="Renault">Renault</option>
+                                <option value="Datsun">Datsun</option>
+                                <option value="Nissan">Nissan</option>
+                                <option value="Volkswagen">Volkswagen</option>
+                                <option value="Skoda">Skoda</option>
+                                <option value="Fiat">Fiat</option>
+                                <option value="Audi">Audi</option>
+                                <option value="BMW">BMW</option>
+                                <option value="Mercedes-Benz">Mercedes-Benz</option>
+                                <option value="Jeep">Jeep</option>
+                                <option value="Volvo">Volvo</option>
+                                <option value="Jaguar">Jaguar</option>
+                                <option value="Land">Land Rover</option>
+                                <option value="Mitsubishi">Mitsubishi</option>
+                                <option value="Ambassador">Ambassador</option>
+                                <option value="Isuzu">Isuzu</option>
+                                <option value="Force">Force</option>
+                                <option value="MG">MG</option>
+                                <option value="Kia">Kia</option>
+                                <option value="Daewoo">Daewoo</option>
+                                <option value="Opel">OpelCorsa</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="model">
+                                <span class="label-icon">🚙</span>
+                                Car Model
+                            </label>
+                            <select id="model" class="form-select" required>
+                                <option value="">Select Brand First</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="year">
+                                <span class="label-icon">📅</span>
+                                Manufacturing Year
+                            </label>
+                            <input type="number" id="year" class="form-input" min="1996" max="2020" value="2015" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="km_driven">
+                                <span class="label-icon">🛣️</span>
+                                Kilometers Driven
+                            </label>
+                            <input type="number" id="km_driven" class="form-input" value="45000" placeholder="e.g., 45000" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="fuel">
+                                <span class="label-icon">⛽</span>
+                                Fuel Type
+                            </label>
+                            <select id="fuel" class="form-select" required>
+                                <option value="">Select Fuel Type</option>
+                                <option value="Petrol" selected>Petrol</option>
+                                <option value="Diesel">Diesel</option>
+                                <option value="CNG">CNG</option>
+                                <option value="LPG">LPG</option>
+                                <option value="Electric">Electric</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="seller_type">
+                                <span class="label-icon">👤</span>
+                                Seller Type
+                            </label>
+                            <select id="seller_type" class="form-select" required>
+                                <option value="">Select Seller Type</option>
+                                <option value="Individual" selected>Individual</option>
+                                <option value="Dealer">Dealer</option>
+                                <option value="Trustmark Dealer">Trustmark Dealer</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="transmission">
+                                <span class="label-icon">⚙️</span>
+                                Transmission
+                            </label>
+                            <select id="transmission" class="form-select" required>
+                                <option value="">Select Transmission</option>
+                                <option value="Manual" selected>Manual</option>
+                                <option value="Automatic">Automatic</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="owner">
+                                <span class="label-icon">🔑</span>
+                                Ownership
+                            </label>
+                            <select id="owner" class="form-select" required>
+                                <option value="">Select Owner Type</option>
+                                <option value="First Owner" selected>First Owner</option>
+                                <option value="Second Owner">Second Owner</option>
+                                <option value="Third Owner">Third Owner</option>
+                                <option value="Fourth & Above Owner">Fourth & Above Owner</option>
+                                <option value="Test Drive Car">Test Drive Car</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="mileage">
+                                <span class="label-icon">📊</span>
+                                Mileage (kmpl) <small style="opacity: 0.7;">(optional)</small>
+                            </label>
+                            <input type="number" id="mileage" class="form-input" step="0.1" placeholder="e.g., 19.5">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="engine">
+                                <span class="label-icon">🔧</span>
+                                Engine (cc) <small style="opacity: 0.7;">(optional)</small>
+                            </label>
+                            <input type="number" id="engine" class="form-input" placeholder="e.g., 1200">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="max_power">
+                                <span class="label-icon">⚡</span>
+                                Max Power (bhp) <small style="opacity: 0.7;">(optional)</small>
+                            </label>
+                            <input type="number" id="max_power" class="form-input" step="0.1" placeholder="e.g., 88.5">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="seats">
+                                <span class="label-icon">💺</span>
+                                Seating Capacity <small style="opacity: 0.7;">(optional)</small>
+                            </label>
+                            <select id="seats" class="form-select">
+                                <option value="">Select Seats</option>
+                                <option value="2">2 Seater</option>
+                                <option value="4">4 Seater</option>
+                                <option value="5" selected>5 Seater</option>
+                                <option value="6">6 Seater</option>
+                                <option value="7">7 Seater</option>
+                                <option value="8">8 Seater</option>
+                                <option value="9">9 Seater</option>
+                                <option value="10">10 Seater</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="background: #fffbeb; border: 1px solid #fbbf24; border-radius: 8px; padding: 12px; margin-bottom: 20px;">
+                        <p style="margin: 0; color: #92400e; font-size: 0.875rem;">
+                            <strong>💡 Tip:</strong> Fields marked as optional will be estimated automatically if left empty.
+                        </p>
+                    </div>
+
+                    <button type="button" onclick="predictPrice()" class="btn btn-primary btn-lg">
+                        <span class="btn-icon">🎯</span>
+                        Get Price Prediction
+                    </button>
+                </form>
+            </div>
+
+            <!-- Results Section -->
+            <div class="card" id="resultsCard" style="display: none;">
+                <div class="card-header">
+                    <h2 class="card-title">Price Prediction</h2>
+                </div>
+                
+                <div class="result-content">
+                    <div class="price-display">
+                        <div class="price-label">Estimated Market Value</div>
+                        <div class="price-value" id="predictedPrice">₹0</div>
+                        <div class="price-range">
+                            <span>Range: </span>
+                            <span id="priceRange">₹0 - ₹0</span>
+                        </div>
+                    </div>
+
+                    <div class="result-info">
+                        <div class="info-badge">
+                            <span class="badge-icon">✓</span>
+                            <span>76%+ Accuracy</span>
+                        </div>
+                        <div class="info-badge">
+                            <span class="badge-icon">🤖</span>
+                            <span>AI Powered</span>
+                        </div>
+                        <div class="info-badge">
+                            <span class="badge-icon">⚡</span>
+                            <span>Instant Result</span>
+                        </div>
+                    </div>
+
+                    <div class="cta-section">
+                        <h3 class="cta-title">Want a Professional Inspection?</h3>
+                        <p class="cta-text">Get a detailed 100+ point vehicle inspection by certified experts</p>
+                        <button onclick="showInspectionForm()" class="btn btn-secondary btn-lg">
+                            <span class="btn-icon">📋</span>
+                            Book Inspection Visit - ₹500
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inspection Booking Form -->
+            <div class="card" id="inspectionCard" style="display: none;">
+                <div class="card-header">
+                    <h2 class="card-title">Book Inspection Visit</h2>
+                    <p class="card-subtitle">Schedule a professional inspection at your doorstep</p>
+                </div>
+
+                <form id="inspectionForm" class="form">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="customer_name">Full Name</label>
+                            <input type="text" id="customer_name" class="form-input" placeholder="John Doe" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="customer_email">Email Address</label>
+                            <input type="email" id="customer_email" class="form-input" placeholder="john@example.com" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="customer_phone">Phone Number</label>
+                            <input type="tel" id="customer_phone" class="form-input" placeholder="+91 98765 43210" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="inspection_date">Preferred Date</label>
+                            <input type="date" id="inspection_date" class="form-input" required>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label class="form-label" for="address">Complete Address</label>
+                            <textarea id="address" class="form-textarea" rows="3" placeholder="Street, City, State, PIN" required></textarea>
+                        </div>
+                    </div>
+
+                    <div class="payment-summary">
+                        <div class="summary-row">
+                            <span>Inspection Fee</span>
+                            <span>₹500</span>
+                        </div>
+                        <div class="summary-row summary-total">
+                            <span>Total Amount</span>
+                            <span>₹500</span>
+                        </div>
+                    </div>
+
+                    <button type="button" onclick="initiatePayment()" class="btn btn-success btn-lg">
+                        <span class="btn-icon">💳</span>
+                        Proceed to Payment
+                    </button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p class="loading-text">Processing your request...</p>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3 class="footer-title">CarValueAI</h3>
+                    <p class="footer-text">AI-powered car valuation platform trusted by thousands.</p>
+                </div>
+                <div class="footer-section">
+                    <h4 class="footer-heading">Quick Links</h4>
+                    <a href="#" class="footer-link">About Us</a>
+                    <a href="#" class="footer-link">How It Works</a>
+                    <a href="#" class="footer-link">Privacy Policy</a>
+                </div>
+                <div class="footer-section">
+                    <h4 class="footer-heading">Contact</h4>
+                    <a href="#" class="footer-link">support@carvalueai.com</a>
+                    <a href="#" class="footer-link">+91 98765 43210</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 CarValueAI. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Car Models Data and Helper Functions -->
+    <script>
+        const carModels = {
+            "Maruti": ["800", "Wagon R", "Alto", "Swift", "Dzire", "Baleno", "Vitara Brezza", "Ertiga", "Ciaz", "Celerio", "Ritz", "Omni", "Eeco", "SX4", "Zen", "Esteem", "A-Star", "Ignis", "S-Cross", "Gypsy", "Grand Vitara", "S-Presso"],
+            "Hyundai": ["i10", "i20", "Grand i10", "Verna", "Creta", "Xcent", "EON", "Santro", "Accent", "Elantra", "Venue", "Tucson", "Getz", "Sonata", "Santa Fe"],
+            "Honda": ["City", "Amaze", "Brio", "Jazz", "WR-V", "BR-V", "Civic", "Mobilio", "Accord", "CR-V"],
+            "Tata": ["Indica", "Indigo", "Nano", "Tiago", "Tigor", "Nexon", "Hexa", "Safari", "Harrier", "Bolt", "Zest", "Manza", "Sumo", "Venture", "Aria", "Xenon", "Altroz", "Winger", "Spacio"],
+            "Mahindra": ["Scorpio", "XUV500", "Bolero", "Xylo", "Quanto", "TUV 300", "KUV 100", "Verito", "Thar", "Marazzo", "Renault Logan", "Jeep", "Alturas", "Supro", "NuvoSport", "Ingenio"],
+            "Toyota": ["Innova", "Fortuner", "Etios", "Corolla", "Camry", "Yaris", "Glanza", "Urban Cruiser", "Qualis"],
+            "Ford": ["EcoSport", "Figo", "Aspire", "Endeavour", "Ikon", "Fiesta", "Fusion", "Classic", "Freestyle"],
+            "Chevrolet": ["Beat", "Spark", "Cruze", "Sail", "Tavera", "Enjoy", "Aveo", "Optra", "Captiva"],
+            "Renault": ["Kwid", "Duster", "Lodgy", "Scala", "Pulse", "Fluence", "Captur", "Koleos", "Triber"],
+            "Datsun": ["RediGO", "GO", "GO Plus"],
+            "Nissan": ["Micra", "Sunny", "Terrano", "Evalia", "X-Trail", "Kicks"],
+            "Volkswagen": ["Polo", "Vento", "Jetta", "Passat", "Ameo", "Tiguan", "CrossPolo"],
+            "Skoda": ["Rapid", "Octavia", "Superb", "Fabia", "Yeti", "Laura", "Kodiaq"],
+            "Fiat": ["Punto", "Linea", "Avventura", "Palio", "Grande Punto"],
+            "Audi": ["A4", "A6", "A8", "Q3", "Q5", "Q7", "RS7", "A5"],
+            "BMW": ["3 Series", "5 Series", "7 Series", "X1", "X3", "X5"],
+            "Mercedes-Benz": ["C-Class", "E-Class", "S-Class", "A-Class", "B-Class", "M-Class", "GL-Class", "GLS"],
+            "Jeep": ["Compass", "Wrangler"],
+            "Volvo": ["V40", "XC60", "XC 90"],
+            "Jaguar": ["XF", "XJ", "F-Pace"],
+            "Land": ["Rover Range Rover", "Discovery", "Freelander"],
+            "Mitsubishi": ["Pajero", "Outlander", "Montero"],
+            "Ambassador": ["Grand", "Classic"],
+            "Isuzu": ["D-Max V-Cross"],
+            "Force": ["One", "Gurkha"],
+            "MG": ["Hector"],
+            "Kia": ["Seltos"],
+            "Daewoo": ["Matiz"],
+            "Opel": ["Corsa"]
+        };
+
+        function updateModels() {
+            const brand = document.getElementById('brand').value;
+            const modelSelect = document.getElementById('model');
+            
+            modelSelect.innerHTML = '<option value="">Select Model</option>';
+            
+            if (brand && carModels[brand]) {
+                carModels[brand].forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = brand + ' ' + model;
+                    option.textContent = model;
+                    modelSelect.appendChild(option);
+                });
+                modelSelect.disabled = false;
+            } else {
+                modelSelect.innerHTML = '<option value="">Select Brand First</option>';
+                modelSelect.disabled = true;
+            }
+        }
+    </script>
+
+    <!-- Scripts -->
+    <script src="auth.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
