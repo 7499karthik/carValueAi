@@ -633,8 +633,6 @@ def health_check():
 # ===========================
 # Main
 # ===========================
-if __name__ == '__main__':
+    if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
-    # Use debug=False for production
-    debug_mode = os.getenv('FLASK_ENV') == 'development'
-    app.run(debug=debug_mode, host='0.0.0.0', port=port)
+    app.run(debug=False, host='0.0.0.0', port=port)
