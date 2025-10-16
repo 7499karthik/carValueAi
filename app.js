@@ -2,7 +2,7 @@
 // Configuration
 // ===========================
 const CONFIG = {
-    API_URL: 'http://localhost:5000/api',
+    API_URL: 'https://carvalueai-6.onrender.com/',
     RAZORPAY_KEY: 'rzp_live_RTqBb8Uuk3L4QG'
 };
 
@@ -470,4 +470,5 @@ if (typeof module !== 'undefined' && module.exports) {
         showInspectionForm,
         formatCurrency
     };
+
 }
