@@ -51,24 +51,34 @@ except Exception as e:
     db = None
 
 # ===========================
+# CRITICAL: Handle OPTIONS requests FIRST
+# ===========================
+@app.before_request
+def handle_options():
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Max-Age'] = '86400'
+        return response, 200
+
+# ===========================
 # Request Logging Middleware
 # ===========================
 @app.before_request
 def log_request():
-    print(f"{datetime.now().isoformat()} - {request.method} {request.path}")
-    print(f"Origin: {request.headers.get('Origin')}")
-    print(f"Headers: {dict(request.headers)}")
+    if request.method != 'OPTIONS':  # Don't log OPTIONS spam
+        print(f"{datetime.now().isoformat()} - {request.method} {request.path}")
+        print(f"Origin: {request.headers.get('Origin')}")
 
 # ===========================
-# Authentication Decorator
+# Authentication Decorator (Simplified - OPTIONS already handled)
 # ===========================
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        # Skip for OPTIONS requests (preflight)
-        if request.method == 'OPTIONS':
-            return '', 200
-            
         token = None
         
         # Get token from Authorization header
@@ -110,7 +120,7 @@ def token_required(f):
 # ===========================
 # Health Check Routes
 # ===========================
-@app.route('/', methods=['GET'])
+@app.route('/', methods=['GET', 'OPTIONS'])
 def home():
     return jsonify({
         'status': 'ok',
@@ -119,7 +129,7 @@ def home():
         'cors': 'enabled'
     }), 200
 
-@app.route('/health', methods=['GET'])
+@app.route('/health', methods=['GET', 'OPTIONS'])
 def health():
     db_status = 'connected' if db is not None else 'disconnected'
     return jsonify({
@@ -133,9 +143,6 @@ def health():
 # ===========================
 @app.route('/auth/register', methods=['POST', 'OPTIONS'])
 def register():
-    if request.method == 'OPTIONS':
-        return '', 200
-        
     try:
         data = request.get_json()
         # Your registration logic here
@@ -151,9 +158,6 @@ def register():
 
 @app.route('/auth/login', methods=['POST', 'OPTIONS'])
 def login():
-    if request.method == 'OPTIONS':
-        return '', 200
-        
     try:
         data = request.get_json()
         # Your login logic here
@@ -181,9 +185,6 @@ def login():
 @app.route('/auth/me', methods=['GET', 'OPTIONS'])
 @token_required
 def get_current_user():
-    if request.method == 'OPTIONS':
-        return '', 200
-        
     try:
         user_id = request.current_user.get('user_id')
         # Fetch user from database
@@ -207,9 +208,6 @@ def get_current_user():
 @app.route('/predict', methods=['POST', 'OPTIONS'])
 @token_required
 def predict():
-    if request.method == 'OPTIONS':
-        return '', 200
-        
     try:
         data = request.get_json()
         # Your ML prediction logic here
@@ -232,9 +230,6 @@ def predict():
 @app.route('/create-order', methods=['POST', 'OPTIONS'])
 @token_required
 def create_order():
-    if request.method == 'OPTIONS':
-        return '', 200
-        
     try:
         import razorpay
         
@@ -270,9 +265,6 @@ def create_order():
 @app.route('/verify-payment', methods=['POST', 'OPTIONS'])
 @token_required
 def verify_payment():
-    if request.method == 'OPTIONS':
-        return '', 200
-        
     try:
         import razorpay
         
@@ -305,9 +297,6 @@ def verify_payment():
 @app.route('/book-inspection', methods=['POST', 'OPTIONS'])
 @token_required
 def book_inspection():
-    if request.method == 'OPTIONS':
-        return '', 200
-        
     try:
         data = request.get_json()
         # Your booking logic here
