@@ -17,7 +17,7 @@ kaggle==1.7.4.5
 MarkupSafe==3.0.3
 numpy==1.26.4
 packaging==25.0
-pandas==2.1.2
+pandas==2.2.2
 protobuf==6.32.1
 PyJWT==2.10.1
 pymongo==4.6.0
@@ -37,5 +37,6 @@ tzdata==2025.2
 urllib3==2.5.0
 webencodings==0.5.1
 Werkzeug==3.1.3
+
 
 
