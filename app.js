@@ -1,227 +1,356 @@
-const express = require('express');
-const cors = require('cors');
-const mongoose = require('mongoose');
-require('dotenv').config();
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from pymongo import MongoClient
+from dotenv import load_dotenv
+import os
+from datetime import datetime, timedelta
+import jwt
+from functools import wraps
 
-const app = express();
+# Load environment variables
+load_dotenv()
 
-// ===========================
-// CORS Configuration (MUST BE FIRST!)
-// ===========================
-const allowedOrigins = [
-    'https://carfrontend10.onrender.com',
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://localhost:5500',
-    'http://127.0.0.1:5500'
-];
+# Initialize Flask app
+app = Flask(__name__)
 
-const corsOptions = {
-    origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps, Postman, curl)
-        if (!origin) return callback(null, true);
+# ===========================
+# CORS Configuration (CRITICAL!)
+# ===========================
+CORS(app, 
+     resources={r"/*": {
+         "origins": [
+             "https://carfrontend10.onrender.com",
+             "http://localhost:3000",
+             "http://localhost:5500",
+             "http://127.0.0.1:5500"
+         ],
+         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+         "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
+         "expose_headers": ["Content-Length", "X-Requested-With"],
+         "supports_credentials": True,
+         "max_age": 86400
+     }})
+
+# ===========================
+# Configuration
+# ===========================
+app.config['SECRET_KEY'] = os.getenv('JWT_SECRET', 'your-secret-key-change-in-production')
+app.config['MONGODB_URI'] = os.getenv('MONGODB_URI', 'mongodb://localhost:27017/carvalueai')
+app.config['RAZORPAY_KEY_ID'] = os.getenv('RAZORPAY_KEY_ID')
+app.config['RAZORPAY_KEY_SECRET'] = os.getenv('RAZORPAY_KEY_SECRET')
+
+# ===========================
+# Database Connection
+# ===========================
+try:
+    client = MongoClient(app.config['MONGODB_URI'])
+    db = client.get_database()
+    print("✅ Connected to MongoDB")
+except Exception as e:
+    print(f"❌ MongoDB connection error: {e}")
+    db = None
+
+# ===========================
+# Request Logging Middleware
+# ===========================
+@app.before_request
+def log_request():
+    print(f"{datetime.now().isoformat()} - {request.method} {request.path}")
+    print(f"Origin: {request.headers.get('Origin')}")
+    print(f"Headers: {dict(request.headers)}")
+
+# ===========================
+# Authentication Decorator
+# ===========================
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        # Skip for OPTIONS requests (preflight)
+        if request.method == 'OPTIONS':
+            return '', 200
+            
+        token = None
         
-        if (allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            console.log('Blocked by CORS:', origin);
-            callback(new Error('Not allowed by CORS'));
+        # Get token from Authorization header
+        if 'Authorization' in request.headers:
+            auth_header = request.headers['Authorization']
+            try:
+                token = auth_header.split(' ')[1]  # Bearer TOKEN
+            except IndexError:
+                return jsonify({
+                    'status': 'error',
+                    'error': 'Invalid token format'
+                }), 401
+        
+        if not token:
+            return jsonify({
+                'status': 'error',
+                'error': 'Access denied. No token provided.'
+            }), 401
+        
+        try:
+            # Verify token
+            data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+            request.current_user = data
+        except jwt.ExpiredSignatureError:
+            return jsonify({
+                'status': 'error',
+                'error': 'Token expired. Please login again.'
+            }), 401
+        except jwt.InvalidTokenError:
+            return jsonify({
+                'status': 'error',
+                'error': 'Invalid token'
+            }), 403
+        
+        return f(*args, **kwargs)
+    
+    return decorated
+
+# ===========================
+# Health Check Routes
+# ===========================
+@app.route('/', methods=['GET'])
+def home():
+    return jsonify({
+        'status': 'ok',
+        'message': 'CarValueAI API is running',
+        'timestamp': datetime.now().isoformat(),
+        'cors': 'enabled'
+    }), 200
+
+@app.route('/health', methods=['GET'])
+def health():
+    db_status = 'connected' if db is not None else 'disconnected'
+    return jsonify({
+        'status': 'healthy',
+        'database': db_status,
+        'timestamp': datetime.now().isoformat()
+    }), 200
+
+# ===========================
+# Auth Routes
+# ===========================
+@app.route('/auth/register', methods=['POST', 'OPTIONS'])
+def register():
+    if request.method == 'OPTIONS':
+        return '', 200
+        
+    try:
+        data = request.get_json()
+        # Your registration logic here
+        return jsonify({
+            'status': 'success',
+            'message': 'User registered successfully'
+        }), 201
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 400
+
+@app.route('/auth/login', methods=['POST', 'OPTIONS'])
+def login():
+    if request.method == 'OPTIONS':
+        return '', 200
+        
+    try:
+        data = request.get_json()
+        # Your login logic here
+        # Generate JWT token
+        token = jwt.encode({
+            'user_id': 'user_id_here',
+            'exp': datetime.utcnow() + timedelta(days=30)
+        }, app.config['SECRET_KEY'], algorithm='HS256')
+        
+        return jsonify({
+            'status': 'success',
+            'token': token,
+            'user': {
+                'id': 'user_id_here',
+                'name': 'User Name',
+                'email': data.get('email')
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 400
+
+@app.route('/auth/me', methods=['GET', 'OPTIONS'])
+@token_required
+def get_current_user():
+    if request.method == 'OPTIONS':
+        return '', 200
+        
+    try:
+        user_id = request.current_user.get('user_id')
+        # Fetch user from database
+        return jsonify({
+            'status': 'success',
+            'user': {
+                'id': user_id,
+                'name': 'User Name',
+                'email': 'user@email.com'
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 400
+
+# ===========================
+# Prediction Routes
+# ===========================
+@app.route('/predict', methods=['POST', 'OPTIONS'])
+@token_required
+def predict():
+    if request.method == 'OPTIONS':
+        return '', 200
+        
+    try:
+        data = request.get_json()
+        # Your ML prediction logic here
+        predicted_price = 500000  # Example price
+        
+        return jsonify({
+            'status': 'success',
+            'predicted_price': predicted_price,
+            'car_id': 'generated_car_id'
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 400
+
+# ===========================
+# Payment Routes
+# ===========================
+@app.route('/create-order', methods=['POST', 'OPTIONS'])
+@token_required
+def create_order():
+    if request.method == 'OPTIONS':
+        return '', 200
+        
+    try:
+        import razorpay
+        
+        data = request.get_json()
+        amount = data.get('amount', 50000)
+        
+        client = razorpay.Client(auth=(
+            app.config['RAZORPAY_KEY_ID'], 
+            app.config['RAZORPAY_KEY_SECRET']
+        ))
+        
+        order_data = {
+            'amount': amount,
+            'currency': 'INR',
+            'payment_capture': 1
         }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-    exposedHeaders: ['Content-Length', 'X-Requested-With'],
-    maxAge: 86400 // 24 hours - cache preflight requests
-};
+        
+        order = client.order.create(data=order_data)
+        
+        return jsonify({
+            'status': 'success',
+            'order_id': order['id'],
+            'amount': order['amount'],
+            'currency': order['currency'],
+            'key_id': app.config['RAZORPAY_KEY_ID']
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 400
 
-// Apply CORS middleware globally
-app.use(cors(corsOptions));
+@app.route('/verify-payment', methods=['POST', 'OPTIONS'])
+@token_required
+def verify_payment():
+    if request.method == 'OPTIONS':
+        return '', 200
+        
+    try:
+        import razorpay
+        
+        data = request.get_json()
+        
+        client = razorpay.Client(auth=(
+            app.config['RAZORPAY_KEY_ID'], 
+            app.config['RAZORPAY_KEY_SECRET']
+        ))
+        
+        # Verify payment signature
+        params_dict = {
+            'razorpay_order_id': data.get('order_id'),
+            'razorpay_payment_id': data.get('payment_id'),
+            'razorpay_signature': data.get('signature')
+        }
+        
+        client.utility.verify_payment_signature(params_dict)
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Payment verified successfully'
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 400
 
-// Handle preflight requests explicitly for all routes
-app.options('*', cors(corsOptions));
+@app.route('/book-inspection', methods=['POST', 'OPTIONS'])
+@token_required
+def book_inspection():
+    if request.method == 'OPTIONS':
+        return '', 200
+        
+    try:
+        data = request.get_json()
+        # Your booking logic here
+        
+        booking_id = f"BOOK{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        
+        return jsonify({
+            'status': 'success',
+            'booking_id': booking_id,
+            'message': 'Inspection booked successfully'
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 400
 
-// ===========================
-// Body Parser Middleware
-// ===========================
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+# ===========================
+# Error Handlers
+# ===========================
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({
+        'status': 'error',
+        'error': 'Route not found',
+        'path': request.path
+    }), 404
 
-// ===========================
-// Request Logging Middleware (optional but helpful)
-// ===========================
-app.use((req, res, next) => {
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
-    console.log('Origin:', req.headers.origin);
-    console.log('Headers:', req.headers);
-    next();
-});
+@app.errorhandler(500)
+def internal_error(error):
+    return jsonify({
+        'status': 'error',
+        'error': 'Internal server error'
+    }), 500
 
-// ===========================
-// Database Connection
-// ===========================
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/carvalueai';
-
-mongoose.connect(MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-})
-.then(() => {
-    console.log('✅ Connected to MongoDB');
-})
-.catch((err) => {
-    console.error('❌ MongoDB connection error:', err);
-    process.exit(1);
-});
-
-// Handle MongoDB connection errors after initial connection
-mongoose.connection.on('error', (err) => {
-    console.error('MongoDB error:', err);
-});
-
-mongoose.connection.on('disconnected', () => {
-    console.log('MongoDB disconnected');
-});
-
-// ===========================
-// Health Check Route (before auth)
-// ===========================
-app.get('/', (req, res) => {
-    res.json({ 
-        status: 'ok', 
-        message: 'CarValueAI API is running',
-        timestamp: new Date().toISOString(),
-        cors: 'enabled',
-        allowedOrigins: allowedOrigins
-    });
-});
-
-app.get('/health', (req, res) => {
-    res.json({
-        status: 'healthy',
-        database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-        uptime: process.uptime(),
-        timestamp: new Date().toISOString()
-    });
-});
-
-// ===========================
-// Import Routes
-// ===========================
-const authRoutes = require('./routes/auth');
-const predictionRoutes = require('./routes/prediction');
-const paymentRoutes = require('./routes/payment');
-const inspectionRoutes = require('./routes/inspection');
-
-// ===========================
-// Mount Routes
-// ===========================
-app.use('/auth', authRoutes);
-app.use('/api/predict', predictionRoutes);
-app.use('/api/payment', paymentRoutes);
-app.use('/api/inspection', inspectionRoutes);
-
-// Alternative route mounting if your frontend calls directly
-app.post('/predict', require('./middleware/auth'), require('./controllers/prediction').predict);
-app.post('/create-order', require('./middleware/auth'), require('./controllers/payment').createOrder);
-app.post('/verify-payment', require('./middleware/auth'), require('./controllers/payment').verifyPayment);
-app.post('/book-inspection', require('./middleware/auth'), require('./controllers/inspection').bookInspection);
-
-// ===========================
-// 404 Handler
-// ===========================
-app.use((req, res) => {
-    res.status(404).json({
-        status: 'error',
-        error: 'Route not found',
-        path: req.path,
-        method: req.method
-    });
-});
-
-// ===========================
-// Global Error Handler
-// ===========================
-app.use((err, req, res, next) => {
-    console.error('Error:', err);
-    
-    // Handle CORS errors
-    if (err.message === 'Not allowed by CORS') {
-        return res.status(403).json({
-            status: 'error',
-            error: 'CORS policy: Origin not allowed',
-            origin: req.headers.origin
-        });
-    }
-    
-    // Handle JWT errors
-    if (err.name === 'JsonWebTokenError') {
-        return res.status(401).json({
-            status: 'error',
-            error: 'Invalid authentication token'
-        });
-    }
-    
-    if (err.name === 'TokenExpiredError') {
-        return res.status(401).json({
-            status: 'error',
-            error: 'Authentication token expired'
-        });
-    }
-    
-    // Handle Mongoose validation errors
-    if (err.name === 'ValidationError') {
-        return res.status(400).json({
-            status: 'error',
-            error: 'Validation error',
-            details: err.message
-        });
-    }
-    
-    // Default error response
-    res.status(err.status || 500).json({
-        status: 'error',
-        error: err.message || 'Internal server error',
-        ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-    });
-});
-
-// ===========================
-// Graceful Shutdown
-// ===========================
-process.on('SIGTERM', () => {
-    console.log('SIGTERM received, closing server gracefully...');
-    mongoose.connection.close(false, () => {
-        console.log('MongoDB connection closed');
-        process.exit(0);
-    });
-});
-
-process.on('SIGINT', () => {
-    console.log('SIGINT received, closing server gracefully...');
-    mongoose.connection.close(false, () => {
-        console.log('MongoDB connection closed');
-        process.exit(0);
-    });
-});
-
-// ===========================
-// Start Server
-// ===========================
-const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
-    console.log('=================================');
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🔒 CORS enabled for: ${allowedOrigins.join(', ')}`);
-    console.log(`📅 Started at: ${new Date().toISOString()}`);
-    console.log('=================================');
-});
-
-// Handle server errors
-server.on('error', (err) => {
-    console.error('Server error:', err);
-    process.exit(1);
-});
-
-module.exports = app;
+# ===========================
+# Run Server
+# ===========================
+if __name__ == '__main__':
+    port = int(os.getenv('PORT', 5000))
+    print('=' * 50)
+    print(f'🚀 Server running on port {port}')
+    print(f'🔒 CORS enabled for frontend')
+    print(f'📅 Started at: {datetime.now().isoformat()}')
+    print('=' * 50)
+    app.run(host='0.0.0.0', port=port, debug=False)
